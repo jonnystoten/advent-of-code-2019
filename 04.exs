@@ -33,14 +33,11 @@ defmodule Day4 do
         end
       end)
 
-    has_double and
-      digits
-      |> Enum.zip(tl(digits))
-      |> ascending_only?()
+    has_double and ascending_only?(digits)
   end
 
   defp ascending_only?([]), do: true
-  defp ascending_only?([{a, b} | _]) when a > b, do: false
+  defp ascending_only?([a, b | _]) when a > b, do: false
   defp ascending_only?([_ | tail]), do: ascending_only?(tail)
 end
 
