@@ -33,18 +33,15 @@ defmodule Day4 do
         end
       end)
 
-    pairs = Enum.zip(digits, tl(digits))
-
-    valid =
-      Enum.reduce_while(pairs, true, fn {a, b}, _valid ->
-        cond do
-          a > b -> {:halt, false}
-          true -> {:cont, true}
-        end
-      end)
-
-    valid and has_double
+    has_double and
+      digits
+      |> Enum.zip(tl(digits))
+      |> ascending_only?()
   end
+
+  defp ascending_only?([]), do: true
+  defp ascending_only?([{a, b} | _]) when a > b, do: false
+  defp ascending_only?([_ | tail]), do: ascending_only?(tail)
 end
 
 input = "109165-576723"
