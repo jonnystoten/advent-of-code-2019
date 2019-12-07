@@ -3,7 +3,12 @@ defmodule AdventOfCode.Intcode.Computer do
 
   require Logger
 
-  defstruct memory: [], instruction_counter: 0, halted: false
+  defstruct memory: [],
+            instruction_counter: 0,
+            halted: false,
+            jumped: false,
+            input: :stdio,
+            output: :stdio
 
   defmodule Operations do
     def add(computer, params, modes) do
@@ -32,7 +37,7 @@ defmodule AdventOfCode.Intcode.Computer do
     defp get(computer, value, :position), do: Computer.get_memory(computer, value)
 
     def input(computer, [address], [:position]) do
-      str = IO.gets("Input: ")
+      str = IO.gets(computer.input, "Input: ")
 
       input =
         str
@@ -46,9 +51,50 @@ defmodule AdventOfCode.Intcode.Computer do
     def output(computer, [value_or_address], [mode]) do
       value = get(computer, value_or_address, mode)
 
-      IO.puts("Output: #{value}")
+      IO.puts(computer.output, value)
 
       computer
+    end
+
+    def jump_if_true(computer, params, modes) do
+      jump(computer, params, modes, &(&1 != 0))
+    end
+
+    def jump_if_false(computer, params, modes) do
+      jump(computer, params, modes, &(&1 == 0))
+    end
+
+    defp jump(computer, [param, target], [param_mode, target_mode], fun) do
+      value = get(computer, param, param_mode)
+      target = get(computer, target, target_mode)
+
+      if fun.(value) do
+        %Computer{computer | jumped: true, instruction_counter: target}
+      else
+        computer
+      end
+    end
+
+    def less_than(computer, params, modes) do
+      compare(computer, params, modes, &(&1 < &2))
+    end
+
+    def equals(computer, params, modes) do
+      compare(computer, params, modes, &(&1 == &2))
+    end
+
+    defp compare(computer, [a, b, output], [a_mode, b_mode, :position], fun) do
+      a = get(computer, a, a_mode)
+      b = get(computer, b, b_mode)
+
+      result =
+        if fun.(a, b) do
+          1
+        else
+          0
+        end
+
+      Computer.set_memory(computer, output, result)
     end
 
     def halt(computer, _, _) do
@@ -56,12 +102,9 @@ defmodule AdventOfCode.Intcode.Computer do
     end
   end
 
-  def new do
-    %Computer{}
-  end
-
-  def new(initial_memory) do
-    %Computer{memory: initial_memory}
+  def new(initial_memory \\ [], input \\ :stdio, output \\ :stdio) do
+    IO.puts("New computer starting")
+    %Computer{memory: initial_memory, input: input, output: output}
   end
 
   def get_memory(computer, address) do
@@ -126,6 +169,10 @@ defmodule AdventOfCode.Intcode.Computer do
     parse_modes(div(raw, 10), [rem(raw, 10) | modes])
   end
 
+  def increment_instruction_counter(%Computer{jumped: true} = computer, _by) do
+    %Computer{computer | jumped: false}
+  end
+
   def increment_instruction_counter(computer, by) do
     %Computer{computer | instruction_counter: computer.instruction_counter + by}
   end
@@ -144,6 +191,22 @@ defmodule AdventOfCode.Intcode.Computer do
 
   defp opcode_info(4) do
     %{fun: :output, params: 1}
+  end
+
+  defp opcode_info(5) do
+    %{fun: :jump_if_true, params: 2}
+  end
+
+  defp opcode_info(6) do
+    %{fun: :jump_if_false, params: 2}
+  end
+
+  defp opcode_info(7) do
+    %{fun: :less_than, params: 3}
+  end
+
+  defp opcode_info(8) do
+    %{fun: :equals, params: 3}
   end
 
   defp opcode_info(99) do

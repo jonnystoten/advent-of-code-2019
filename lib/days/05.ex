@@ -14,16 +14,21 @@ defmodule AdventOfCode.Day5 do
   end
 
   def part1(%{memory: memory}) do
-    memory
-    |> Computer.new()
-    |> Computer.execute()
+    StringIO.open("1", [], fn pid ->
+      memory
+      |> Computer.new(pid)
+      |> Computer.execute()
+    end)
 
     :ok
   end
 
   def part2(%{memory: memory}) do
-    memory
-    |> Computer.new()
+    StringIO.open("5", [], fn pid ->
+      memory
+      |> Computer.new(pid)
+      |> Computer.execute()
+    end)
 
     :ok
   end
