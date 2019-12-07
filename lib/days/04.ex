@@ -1,9 +1,20 @@
-defmodule Day4 do
-  def part1(min, max) do
+defmodule AdventOfCode.Day4 do
+  @behaviour AdventOfCode
+
+  def setup(input) do
+    [min, max] =
+      input
+      |> String.split("-")
+      |> Enum.map(&String.to_integer/1)
+
+    %{min: min, max: max}
+  end
+
+  def part1(%{min: min, max: max}) do
     valid_passwords_count(min, max, false)
   end
 
-  def part2(min, max) do
+  def part2(%{min: min, max: max}) do
     valid_passwords_count(min, max, true)
   end
 
@@ -40,16 +51,3 @@ defmodule Day4 do
   defp ascending_only?([a, b | _]) when a > b, do: false
   defp ascending_only?([_ | tail]), do: ascending_only?(tail)
 end
-
-input = "109165-576723"
-
-[min, max] =
-  input
-  |> String.split("-")
-  |> Enum.map(&String.to_integer/1)
-
-Day4.part1(min, max)
-|> IO.puts()
-
-Day4.part2(min, max)
-|> IO.puts()
