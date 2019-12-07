@@ -1,6 +1,8 @@
 defmodule AdventOfCode.Day2 do
   @behaviour AdventOfCode
 
+  alias AdventOfCode.Intcode.Computer
+
   def setup(input) do
     memory =
       input
@@ -13,35 +15,39 @@ defmodule AdventOfCode.Day2 do
 
   def part1(%{memory: memory}) do
     memory
+    |> Computer.new()
     |> restore(12, 2)
-    |> execute()
+    |> Computer.execute()
+    |> Computer.get_memory(0)
   end
 
   def part2(%{memory: memory}) do
     memory
+    |> Computer.new()
     |> brute_force_inputs()
   end
 
-  defp restore(program, noun, verb) do
-    program
-    |> List.replace_at(1, noun)
-    |> List.replace_at(2, verb)
+  defp restore(computer, noun, verb) do
+    computer
+    |> Computer.set_memory(1, noun)
+    |> Computer.set_memory(2, verb)
   end
 
-  defp brute_force_inputs(program) do
-    brute_force_inputs(all_inputs(), program)
+  defp brute_force_inputs(computer) do
+    brute_force_inputs(all_inputs(), computer)
   end
 
-  defp brute_force_inputs([{noun, verb} | tail], program) do
+  defp brute_force_inputs([{noun, verb} | tail], computer) do
     result =
-      program
+      computer
       |> restore(noun, verb)
-      |> execute()
+      |> Computer.execute()
+      |> Computer.get_memory(0)
 
     if result == 19_690_720 do
       100 * noun + verb
     else
-      brute_force_inputs(tail, program)
+      brute_force_inputs(tail, computer)
     end
   end
 
@@ -49,35 +55,5 @@ defmodule AdventOfCode.Day2 do
     for x <- 0..99, y <- 0..99 do
       {x, y}
     end
-  end
-
-  defp execute(program) do
-    execute(Enum.at(program, 0), 0, program)
-  end
-
-  defp execute(cursor, program) do
-    opcode = Enum.at(program, cursor)
-    execute(opcode, cursor, program)
-  end
-
-  defp execute(99, _cursor, program) do
-    Enum.at(program, 0)
-  end
-
-  defp execute(opcode, cursor, program) do
-    [input1, input2, output] = Enum.slice(program, cursor + 1, 3)
-    a = Enum.at(program, input1)
-    b = Enum.at(program, input2)
-    result = op(opcode, a, b)
-    program = List.replace_at(program, output, result)
-    execute(cursor + 4, program)
-  end
-
-  defp op(1, a, b) do
-    a + b
-  end
-
-  defp op(2, a, b) do
-    a * b
   end
 end
