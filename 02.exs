@@ -1,4 +1,4 @@
-defmodule Day1 do
+defmodule Day2 do
   def part1(input) do
     input
     |> restore(12, 2)
@@ -80,8 +80,8 @@ input =
   |> String.split(",")
   |> Enum.map(&String.to_integer/1)
 
-Day1.part1(input)
+Day2.part1(input)
 |> IO.puts()
 
-Day1.part2(input)
+Day2.part2(input)
 |> IO.puts()
