@@ -1,31 +1,58 @@
 defmodule AdventOfCode.Intcode.Computer do
   alias __MODULE__
 
-  defstruct memory: [], instruction_counter: 0
+  require Logger
+
+  defstruct memory: [], instruction_counter: 0, halted: false
 
   defmodule Operations do
-    def add(computer) do
-      arithmetic(computer, fn a, b -> a + b end)
+    def add(computer, params, modes) do
+      arithmetic(computer, params, modes, fn a, b -> a + b end)
     end
 
-    def mult(computer) do
-      arithmetic(computer, fn a, b -> a * b end)
+    def mult(computer, params, modes) do
+      arithmetic(computer, params, modes, fn a, b -> a * b end)
     end
 
-    def arithmetic(computer, fun) do
-      [input1, input2, output] = Enum.slice(computer.memory, computer.instruction_counter + 1, 3)
-      a = Computer.get_memory(computer, input1)
-      b = Computer.get_memory(computer, input2)
+    defp arithmetic(
+           computer,
+           [input1, input2, output],
+           [input1_mode, input2_mode, :position],
+           fun
+         ) do
+      a = get(computer, input1, input1_mode)
+      b = get(computer, input2, input2_mode)
       result = fun.(a, b)
 
       computer
       |> Computer.set_memory(output, result)
-      |> Computer.increment_instruction_counter(4)
-      |> Computer.execute()
     end
 
-    def halt(computer) do
+    defp get(_computer, value, :immediate), do: value
+    defp get(computer, value, :position), do: Computer.get_memory(computer, value)
+
+    def input(computer, [address], [:position]) do
+      str = IO.gets("Input: ")
+
+      input =
+        str
+        |> String.trim()
+        |> String.to_integer()
+
       computer
+      |> Computer.set_memory(address, input)
+    end
+
+    def output(computer, [value_or_address], [mode]) do
+      value = get(computer, value_or_address, mode)
+
+      IO.puts("Output: #{value}")
+
+      computer
+    end
+
+    def halt(computer, _, _) do
+      %Computer{computer | halted: true}
     end
   end
 
@@ -45,15 +72,37 @@ defmodule AdventOfCode.Intcode.Computer do
     %Computer{computer | memory: List.replace_at(computer.memory, address, value)}
   end
 
-  def execute(computer) do
-    {opcode, _modes} = current_opcode(computer)
-    info = opcode_info(opcode)
-    execute(computer, info)
+  defp get_params(computer, param_count) do
+    Enum.slice(computer.memory, computer.instruction_counter + 1, param_count)
   end
 
-  defp execute(computer, %{fun: fun, size: size}) do
-    computer = apply(Operations, fun, [computer])
-    increment_instruction_counter(computer, size)
+  def execute(%Computer{halted: true} = computer) do
+    computer
+  end
+
+  def execute(computer) do
+    {opcode, modes} = current_opcode(computer)
+    %{fun: fun, params: param_count} = opcode_info(opcode)
+    params = get_params(computer, param_count)
+
+    modes =
+      params
+      |> Enum.with_index()
+      |> Enum.map(fn {_, index} ->
+        modes
+        |> Enum.at(index, 0)
+        |> mode()
+      end)
+
+    execute(computer, fun, params, modes)
+  end
+
+  defp execute(computer, fun, params, modes) do
+    Logger.debug("doing a #{fun}, params: #{inspect(params)}, modes: #{inspect(modes)}")
+
+    apply(Operations, fun, [computer, params, modes])
+    |> increment_instruction_counter(length(params) + 1)
+    |> Computer.execute()
   end
 
   defp current_opcode(computer) do
@@ -82,14 +131,25 @@ defmodule AdventOfCode.Intcode.Computer do
   end
 
   defp opcode_info(1) do
-    %{fun: :add, size: 4}
+    %{fun: :add, params: 3}
   end
 
   defp opcode_info(2) do
-    %{fun: :mult, size: 4}
+    %{fun: :mult, params: 3}
+  end
+
+  defp opcode_info(3) do
+    %{fun: :input, params: 1}
+  end
+
+  defp opcode_info(4) do
+    %{fun: :output, params: 1}
   end
 
   defp opcode_info(99) do
-    %{fun: :halt, size: 0}
+    %{fun: :halt, params: 0}
   end
+
+  defp mode(0), do: :position
+  defp mode(1), do: :immediate
 end
