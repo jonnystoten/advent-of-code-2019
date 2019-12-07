@@ -1,7 +1,7 @@
 defmodule AdventOfCode.Day5 do
   @behaviour AdventOfCode
 
-  alias AdventOfCode.Intcode.Computer
+  alias AdventOfCode.Intcode.{Computer, IO}
 
   def setup(input) do
     memory =
@@ -14,22 +14,30 @@ defmodule AdventOfCode.Day5 do
   end
 
   def part1(%{memory: memory}) do
-    StringIO.open("1", [], fn pid ->
-      memory
-      |> Computer.new(pid)
-      |> Computer.execute()
-    end)
+    out_pid = spawn_link(IO, :console_output, [])
 
-    :ok
+    computer = Computer.new(memory, out_pid)
+    {pid, ref} = spawn_monitor(Computer, :execute, [computer])
+
+    send(pid, {:io, 1})
+
+    receive do
+      {:DOWN, ^ref, _, _, _} ->
+        :ok
+    end
   end
 
   def part2(%{memory: memory}) do
-    StringIO.open("5", [], fn pid ->
-      memory
-      |> Computer.new(pid)
-      |> Computer.execute()
-    end)
+    out_pid = spawn_link(IO, :console_output, [])
 
-    :ok
+    computer = Computer.new(memory, out_pid)
+    {pid, ref} = spawn_monitor(Computer, :execute, [computer])
+
+    send(pid, {:io, 5})
+
+    receive do
+      {:DOWN, ^ref, _, _, _} ->
+        :ok
+    end
   end
 end

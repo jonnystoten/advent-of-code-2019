@@ -1,6 +1,8 @@
 defmodule AdventOfCode.Intcode.Operations do
   alias AdventOfCode.Intcode.Computer
 
+  require Logger
+
   def add(computer, params, modes) do
     arithmetic(computer, params, modes, fn a, b -> a + b end)
   end
@@ -27,21 +29,26 @@ defmodule AdventOfCode.Intcode.Operations do
   defp get(computer, value, :position), do: Computer.get_memory(computer, value)
 
   def input(computer, [address], [:position]) do
-    str = IO.gets(computer.input, "Input: ")
+    value =
+      receive do
+        {:io, value} ->
+          Logger.debug("got input: #{value}")
 
-    input =
-      str
-      |> String.trim()
-      |> String.to_integer()
+          value
+      end
 
-    computer
-    |> Computer.set_memory(address, input)
+    Computer.set_memory(computer, address, value)
+  end
+
+  def output(%Computer{output: nil}, _, _) do
+    raise "no output connected!"
   end
 
   def output(computer, [value_or_address], [mode]) do
     value = get(computer, value_or_address, mode)
 
-    IO.puts(computer.output, value)
+    Logger.debug("sending output #{value} to: #{inspect(computer.output)}")
+    send(computer.output, {:io, value})
 
     computer
   end

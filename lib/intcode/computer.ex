@@ -8,12 +8,11 @@ defmodule AdventOfCode.Intcode.Computer do
             instruction_counter: 0,
             halted: false,
             jumped: false,
-            input: :stdio,
-            output: :stdio
+            output: nil
 
-  def new(initial_memory \\ [], input \\ :stdio, output \\ :stdio) do
-    IO.puts("New computer starting")
-    %Computer{memory: initial_memory, input: input, output: output}
+  def new(initial_memory, output \\ nil) do
+    Logger.debug("New computer starting")
+    %Computer{memory: initial_memory, output: output}
   end
 
   def get_memory(computer, address) do

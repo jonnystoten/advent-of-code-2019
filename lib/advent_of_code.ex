@@ -10,13 +10,8 @@ defmodule AdventOfCode do
     mod = String.to_existing_atom("Elixir.AdventOfCode.Day#{day}")
     input = apply(mod, :setup, [text_input])
 
-    part1_answer = apply(mod, :part1, [input])
-    part2_answer = apply(mod, :part2, [input])
-
-    IO.puts("""
-    Day #{day}:
-    Part 1: #{part1_answer}
-    Part 2: #{part2_answer}
-    """)
+    IO.puts("Day #{day}:")
+    IO.puts("Part 1: #{apply(mod, :part1, [input])}")
+    IO.puts("Part 2: #{apply(mod, :part2, [input])}")
   end
 end
