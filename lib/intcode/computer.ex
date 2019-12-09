@@ -4,27 +4,55 @@ defmodule AdventOfCode.Intcode.Computer do
 
   require Logger
 
-  defstruct memory: [],
+  defstruct memory: %{},
             instruction_counter: 0,
+            relative_base: 0,
             halted: false,
             jumped: false,
             output: nil
 
-  def new(initial_memory, output \\ nil) do
+  def new(initial_memory, output \\ nil)
+
+  def new(initial_memory, output) when is_list(initial_memory) do
+    memory =
+      initial_memory
+      |> Enum.with_index()
+      |> Map.new(fn {x, i} -> {i, x} end)
+
+    new(memory, output)
+  end
+
+  def new(initial_memory, output) do
     Logger.debug("New computer starting")
     %Computer{memory: initial_memory, output: output}
   end
 
+  def address(_computer, address, :position), do: address
+  def address(computer, address, :relative), do: computer.relative_base + address
+
+  def operand(_computer, value, :immediate), do: value
+
+  def operand(computer, value, mode) do
+    Computer.get_memory(computer, address(computer, value, mode))
+  end
+
   def get_memory(computer, address) do
-    Enum.at(computer.memory, address)
+    Map.get(computer.memory, address, 0)
   end
 
   def set_memory(computer, address, value) do
-    %Computer{computer | memory: List.replace_at(computer.memory, address, value)}
+    %Computer{computer | memory: Map.put(computer.memory, address, value)}
   end
 
   defp get_params(computer, param_count) do
-    Enum.slice(computer.memory, computer.instruction_counter + 1, param_count)
+    get_params(computer, param_count, [])
+  end
+
+  defp get_params(_computer, 0, result), do: result
+
+  defp get_params(computer, param_count, results) do
+    param = get_memory(computer, computer.instruction_counter + param_count)
+    get_params(computer, param_count - 1, [param | results])
   end
 
   def execute(%Computer{halted: true} = computer) do
@@ -57,7 +85,7 @@ defmodule AdventOfCode.Intcode.Computer do
   end
 
   defp current_opcode(computer) do
-    raw = Enum.at(computer.memory, computer.instruction_counter)
+    raw = get_memory(computer, computer.instruction_counter)
 
     op = rem(raw, 100)
     raw = div(raw, 100)
@@ -117,10 +145,15 @@ defmodule AdventOfCode.Intcode.Computer do
     %{fun: :equals, params: 3}
   end
 
+  defp opcode_info(9) do
+    %{fun: :relative_base_offset, params: 1}
+  end
+
   defp opcode_info(99) do
     %{fun: :halt, params: 0}
   end
 
   defp mode(0), do: :position
   defp mode(1), do: :immediate
+  defp mode(2), do: :relative
 end

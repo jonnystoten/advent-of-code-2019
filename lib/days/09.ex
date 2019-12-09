@@ -1,4 +1,4 @@
-defmodule AdventOfCode.Day5 do
+defmodule AdventOfCode.Day9 do
   @behaviour AdventOfCode
 
   alias AdventOfCode.Intcode
@@ -39,7 +39,7 @@ defmodule AdventOfCode.Day5 do
     computer = Computer.new(memory, out_pid)
     {pid, ref} = spawn_monitor(Computer, :execute, [computer])
 
-    send(pid, {:io, 5})
+    send(pid, {:io, 2})
 
     receive do
       {:DOWN, ^ref, :process, _, :normal} ->

@@ -14,26 +14,25 @@ defmodule AdventOfCode.Intcode.Operations do
   defp arithmetic(
          computer,
          [input1, input2, output],
-         [input1_mode, input2_mode, :position],
+         [input1_mode, input2_mode, output_mode],
          fun
        ) do
-    a = get(computer, input1, input1_mode)
-    b = get(computer, input2, input2_mode)
+    a = Computer.operand(computer, input1, input1_mode)
+    b = Computer.operand(computer, input2, input2_mode)
+    output = Computer.address(computer, output, output_mode)
     result = fun.(a, b)
 
     computer
     |> Computer.set_memory(output, result)
   end
 
-  defp get(_computer, value, :immediate), do: value
-  defp get(computer, value, :position), do: Computer.get_memory(computer, value)
+  def input(computer, [address], [address_mode]) do
+    address = Computer.address(computer, address, address_mode)
 
-  def input(computer, [address], [:position]) do
     value =
       receive do
         {:io, value} ->
           Logger.debug("got input: #{value}")
-
           value
       end
 
@@ -45,7 +44,7 @@ defmodule AdventOfCode.Intcode.Operations do
   end
 
   def output(computer, [value_or_address], [mode]) do
-    value = get(computer, value_or_address, mode)
+    value = Computer.operand(computer, value_or_address, mode)
 
     Logger.debug("sending output #{value} to: #{inspect(computer.output)}")
     send(computer.output, {:io, value})
@@ -62,8 +61,8 @@ defmodule AdventOfCode.Intcode.Operations do
   end
 
   defp jump(computer, [param, target], [param_mode, target_mode], fun) do
-    value = get(computer, param, param_mode)
-    target = get(computer, target, target_mode)
+    value = Computer.operand(computer, param, param_mode)
+    target = Computer.operand(computer, target, target_mode)
 
     if fun.(value) do
       %Computer{computer | jumped: true, instruction_counter: target}
@@ -80,9 +79,10 @@ defmodule AdventOfCode.Intcode.Operations do
     compare(computer, params, modes, &(&1 == &2))
   end
 
-  defp compare(computer, [a, b, output], [a_mode, b_mode, :position], fun) do
-    a = get(computer, a, a_mode)
-    b = get(computer, b, b_mode)
+  defp compare(computer, [a, b, output], [a_mode, b_mode, output_mode], fun) do
+    a = Computer.operand(computer, a, a_mode)
+    b = Computer.operand(computer, b, b_mode)
+    output = Computer.address(computer, output, output_mode)
 
     result =
       if fun.(a, b) do
@@ -92,6 +92,12 @@ defmodule AdventOfCode.Intcode.Operations do
       end
 
     Computer.set_memory(computer, output, result)
+  end
+
+  def relative_base_offset(computer, [offset], [offset_mode]) do
+    offset = Computer.operand(computer, offset, offset_mode)
+
+    Map.update!(computer, :relative_base, &(&1 + offset))
   end
 
   def halt(computer, _, _) do
