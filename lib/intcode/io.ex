@@ -11,6 +11,9 @@ defmodule AdventOfCode.Intcode.IO do
       {:io, message} ->
         IO.puts(message)
         console_output()
+
+      :stop ->
+        :ok
     end
   end
 end

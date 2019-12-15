@@ -24,6 +24,7 @@ defmodule AdventOfCode.Day5 do
 
     receive do
       {:DOWN, ^ref, :process, _, :normal} ->
+        send(out_pid, :stop)
         :ok
 
       {:DOWN, ^ref, :process, _, _} ->
@@ -43,6 +44,7 @@ defmodule AdventOfCode.Day5 do
 
     receive do
       {:DOWN, ^ref, :process, _, :normal} ->
+        send(out_pid, :stop)
         :ok
 
       {:DOWN, ^ref, :process, _, _} ->
