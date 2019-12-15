@@ -8,7 +8,7 @@ defmodule AdventOfCode.Http do
   ])
 
   def get_input(year, day) do
-    with {:ok, response} = get("/#{year}/day/#{day}/input") do
+    with {:ok, response} <- get("/#{year}/day/#{day}/input") do
       response.body
       |> String.trim()
     end
