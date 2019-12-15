@@ -11,7 +11,16 @@ defmodule AdventOfCode do
     input = apply(mod, :setup, [text_input])
 
     IO.puts("Day #{day}:")
-    IO.puts("Part 1: #{apply(mod, :part1, [input])}")
-    IO.puts("Part 2: #{apply(mod, :part2, [input])}")
+    IO.puts("Part 1:")
+    IO.puts(apply(mod, :part1, [input]))
+    IO.puts("Part 2:")
+    IO.puts(apply(mod, :part2, [input]))
+    IO.puts("==================")
+  end
+
+  def run_all do
+    for day <- 1..25 do
+      run(day)
+    end
   end
 end
