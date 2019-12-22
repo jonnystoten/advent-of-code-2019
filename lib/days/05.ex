@@ -15,42 +15,18 @@ defmodule AdventOfCode.Day5 do
   end
 
   def part1(%{memory: memory}) do
-    out_pid = spawn_link(Intcode.IO, :console_output, [])
+    {:ok, input_pid} = Intcode.IO.CannedInput.start_link([1])
+    {:ok, output_pid} = Intcode.IO.ConsoleOutput.start_link()
 
-    computer = Computer.new(memory, out_pid)
-    {pid, ref} = spawn_monitor(Computer, :execute, [computer])
-
-    send(pid, {:io, 1})
-
-    receive do
-      {:DOWN, ^ref, :process, _, :normal} ->
-        send(out_pid, :stop)
-        :ok
-
-      {:DOWN, ^ref, :process, _, _} ->
-        # make sure we wait around for the error to be loggged
-        Process.sleep(100)
-        :error
-    end
+    Computer.new(memory, input_pid, output_pid)
+    |> Computer.run_to_completion()
   end
 
   def part2(%{memory: memory}) do
-    out_pid = spawn_link(Intcode.IO, :console_output, [])
+    {:ok, input_pid} = Intcode.IO.CannedInput.start_link([5])
+    {:ok, output_pid} = Intcode.IO.ConsoleOutput.start_link()
 
-    computer = Computer.new(memory, out_pid)
-    {pid, ref} = spawn_monitor(Computer, :execute, [computer])
-
-    send(pid, {:io, 5})
-
-    receive do
-      {:DOWN, ^ref, :process, _, :normal} ->
-        send(out_pid, :stop)
-        :ok
-
-      {:DOWN, ^ref, :process, _, _} ->
-        # make sure we wait around for the error to be loggged
-        Process.sleep(100)
-        :error
-    end
+    Computer.new(memory, input_pid, output_pid)
+    |> Computer.run_to_completion()
   end
 end

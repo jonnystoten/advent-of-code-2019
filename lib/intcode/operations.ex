@@ -26,28 +26,27 @@ defmodule AdventOfCode.Intcode.Operations do
     |> Computer.set_memory(output, result)
   end
 
+  def input(%Computer{input_pid: nil}, _, _) do
+    raise "no input connected!"
+  end
+
   def input(computer, [address], [address_mode]) do
     address = Computer.address(computer, address, address_mode)
 
-    value =
-      receive do
-        {:io, value} ->
-          Logger.debug("got input: #{value}")
-          value
-      end
+    value = GenServer.call(computer.input_pid, :get)
 
     Computer.set_memory(computer, address, value)
   end
 
-  def output(%Computer{output: nil}, _, _) do
+  def output(%Computer{output_pid: nil}, _, _) do
     raise "no output connected!"
   end
 
   def output(computer, [value_or_address], [mode]) do
     value = Computer.operand(computer, value_or_address, mode)
 
-    Logger.debug("sending output #{value} to: #{inspect(computer.output)}")
-    send(computer.output, {:io, value})
+    Logger.debug("sending output #{value} to: #{inspect(computer.output_pid)}")
+    GenServer.cast(computer.output_pid, {:put, value})
 
     computer
   end

@@ -9,22 +9,38 @@ defmodule AdventOfCode.Intcode.Computer do
             relative_base: 0,
             halted: false,
             jumped: false,
-            output: nil
+            input_pid: nil,
+            output_pid: nil
 
-  def new(initial_memory, output \\ nil)
+  def new(initial_memory, input_pid \\ nil, output_pid \\ nil)
 
-  def new(initial_memory, output) when is_list(initial_memory) do
+  def new(initial_memory, input_pid, output_pid) when is_list(initial_memory) do
     memory =
       initial_memory
       |> Enum.with_index()
       |> Map.new(fn {x, i} -> {i, x} end)
 
-    new(memory, output)
+    new(memory, input_pid, output_pid)
   end
 
-  def new(initial_memory, output) do
-    Logger.debug("New computer starting")
-    %Computer{memory: initial_memory, output: output}
+  def new(initial_memory, input_pid, output_pid) do
+    %Computer{memory: initial_memory, input_pid: input_pid, output_pid: output_pid}
+  end
+
+  def run_to_completion(computer) do
+    {_pid, ref} = spawn_monitor(Computer, :execute, [computer])
+
+    receive do
+      {:DOWN, ^ref, :process, _, :normal} ->
+        GenServer.call(computer.input_pid, :stop)
+        GenServer.call(computer.output_pid, :stop)
+        :ok
+
+      {:DOWN, ^ref, :process, _, _} ->
+        # make sure we wait around for the error to be loggged
+        Process.sleep(100)
+        :error
+    end
   end
 
   def address(_computer, address, :position), do: address

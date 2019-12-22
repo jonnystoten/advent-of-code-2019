@@ -31,23 +31,60 @@ defmodule AdventOfCode.Day7 do
     |> hd()
   end
 
+  defmodule IOBridge do
+    use GenServer
+
+    def start_link(phase_setting) do
+      GenServer.start_link(__MODULE__, [phase_setting])
+    end
+
+    def init(buffer) do
+      {:ok, %{buffer: buffer, pending: nil}}
+    end
+
+    def handle_call(:get, _from, %{buffer: [head | tail]} = state) do
+      {:reply, head, %{state | buffer: tail}}
+    end
+
+    def handle_call(:get, from, %{buffer: []} = state) do
+      {:noreply, %{state | pending: from}}
+    end
+
+    def handle_call(:stop, _from, %{buffer: buffer} = state) do
+      {:stop, :normal, List.last(buffer), state}
+    end
+
+    def handle_cast({:put, new_input}, %{pending: nil, buffer: buffer} = state) do
+      {:noreply, %{state | buffer: buffer ++ [new_input]}}
+    end
+
+    def handle_cast({:put, new_input}, %{pending: pid} = state) do
+      GenServer.reply(pid, new_input)
+      {:noreply, %{state | pending: nil}}
+    end
+  end
+
   defp thruster_signal(phase_settings, memory) do
-    parent = self()
-
-    out_pid = spawn(__MODULE__, :buffer_io, [parent])
-
-    {pids, first_pid} =
-      Enum.map_reduce(phase_settings, out_pid, fn phase_setting, out_pid ->
-        computer = Computer.new(memory, out_pid)
-        pid = spawn_link(Computer, :execute, [computer])
-
-        send(pid, {:io, phase_setting})
-
-        {pid, pid}
+    [io_1, io_2, io_3, io_4, io_5] =
+      Enum.map(phase_settings, fn phase_setting ->
+        {:ok, pid} = IOBridge.start_link(phase_setting)
+        pid
       end)
 
-    send(out_pid, {:set_dest_pid, first_pid})
-    send(first_pid, {:io, 0})
+    computers = [
+      Computer.new(memory, io_1, io_2),
+      Computer.new(memory, io_2, io_3),
+      Computer.new(memory, io_3, io_4),
+      Computer.new(memory, io_4, io_5),
+      Computer.new(memory, io_5, io_1)
+    ]
+
+    pids =
+      Enum.map(computers, fn computer ->
+        spawn(Computer, :execute, [computer])
+      end)
+
+    GenServer.cast(io_1, {:put, 0})
 
     Enum.each(pids, fn pid ->
       ref = Process.monitor(pid)
@@ -58,30 +95,7 @@ defmodule AdventOfCode.Day7 do
       end
     end)
 
-    send(out_pid, :done)
-
-    receive do
-      {:done, value} ->
-        value
-    end
-  end
-
-  def buffer_io(parent) do
-    buffer_io(parent, [], nil)
-  end
-
-  def buffer_io(parent, values, dest_pid) do
-    receive do
-      {:io, value} = msg ->
-        send(dest_pid, msg)
-        buffer_io(parent, [value | values], dest_pid)
-
-      {:set_dest_pid, pid} ->
-        buffer_io(parent, values, pid)
-
-      :done ->
-        send(parent, {:done, hd(values)})
-    end
+    GenServer.call(io_1, :stop)
   end
 
   defp permutations([]), do: [[]]
