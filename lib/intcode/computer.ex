@@ -33,7 +33,11 @@ defmodule AdventOfCode.Intcode.Computer do
     receive do
       {:DOWN, ^ref, :process, _, :normal} ->
         GenServer.call(computer.input_pid, :stop)
-        GenServer.call(computer.output_pid, :stop)
+
+        if computer.output_pid != computer.input_pid do
+          GenServer.call(computer.output_pid, :stop)
+        end
+
         :ok
 
       {:DOWN, ^ref, :process, _, _} ->
